@@ -55,11 +55,12 @@ class TemperatureHumidityMonitor:
 
         # RPLCDライブラリを使用してPCF8574搭載のI2C接続LCDを初期化
         # 前提リポジトリ（06-002-lcd1602-display）の実装方法に準拠
+        # PCF8574はI2C拡張チップで、LCDとRaspberry Piの橋渡しをする
         try:
             self.lcd = CharLCD('PCF8574', lcd_address, port=lcd_port)
-            self.lcd.clear()
-            self.lcd.write_string("温湿度モニタ")
-            time.sleep(2)
+            self.lcd.clear()  # 画面をクリア
+            self.lcd.write_string("温湿度モニタ")  # 起動メッセージ表示
+            time.sleep(2)  # ユーザーが確認できるよう2秒待機
             print("LCD1602ディスプレイを初期化しました")
         except Exception as e:
             print(f"LCD初期化エラー: {e}")
@@ -77,29 +78,43 @@ class TemperatureHumidityMonitor:
         signal.signal(signal.SIGTERM, self._signal_handler)
     
     def _initialize_csv_file(self) -> None:
-        """CSVファイルの初期化（ヘッダー行の追加）"""
+        """
+        CSVファイルの初期化（ヘッダー行の追加）
+
+        CSVファイルを新規作成し、ヘッダー行（timestamp, temperature, humidity）を書き込む
+        既存ファイルは上書きされるので注意
+        """
         try:
+            # CSVファイルを書き込みモードで開く（既存ファイルは上書き）
             with open(self.csv_file, 'w', newline='', encoding='utf-8') as file:
                 writer = csv.writer(file)
+                # ヘッダー行を書き込み（各列の意味を定義）
                 writer.writerow(['timestamp', 'temperature', 'humidity'])
             print(f"CSVファイル '{self.csv_file}' を初期化しました")
         except Exception as e:
             print(f"CSVファイル初期化エラー: {e}")
+            # エラー時はCSV出力を無効化
             self.csv_file = None
     
     def _signal_handler(self, signum, frame) -> None:
-        """シグナルハンドラー（適切な終了処理）"""
+        """
+        シグナルハンドラー（Ctrl+C や kill コマンドで適切に終了）
+
+        Args:
+            signum: 受信したシグナル番号
+            frame: 現在のスタックフレーム（Pythonが自動的に渡す）
+        """
         print("\n終了シグナルを受信しました。クリーンアップ中...")
-        self.running = False
+        self.running = False  # メインループを停止
         if self.lcd:
             try:
                 self.lcd.clear()
-                self.lcd.write_string("終了しました")
-                time.sleep(1)
-                self.lcd.clear()
+                self.lcd.write_string("終了しました")  # 終了メッセージ表示
+                time.sleep(1)  # ユーザーが確認できるよう待機
+                self.lcd.clear()  # 画面をクリアして終了
             except Exception as e:
                 print(f"LCD終了処理エラー: {e}")
-        sys.exit(0)
+        sys.exit(0)  # プログラムを正常終了
     
     def read_sensor_data(self) -> Tuple[Optional[float], Optional[float]]:
         """
@@ -189,22 +204,25 @@ class TemperatureHumidityMonitor:
         except Exception as e:
             print(f"LCD表示エラー: {e}")
     
-    def log_to_csv(self, temperature: Optional[float], 
+    def log_to_csv(self, temperature: Optional[float],
                    humidity: Optional[float], timestamp: str) -> None:
         """
-        CSVファイルにデータ出力
-        
+        CSVファイルにデータ出力（追記モード）
+
         Args:
-            temperature: 温度（℃）
-            humidity: 湿度（％）
-            timestamp: タイムスタンプ
+            temperature (float): 温度（℃）
+            humidity (float): 湿度（％）
+            timestamp (str): タイムスタンプ（YYYY-MM-DD HH:MM:SS形式）
         """
+        # CSVファイルが指定されていない場合は何もしない
         if not self.csv_file:
             return
-        
+
         try:
+            # CSVファイルを追記モードで開く（既存データは保持）
             with open(self.csv_file, 'a', newline='', encoding='utf-8') as file:
                 writer = csv.writer(file)
+                # データ行を追記（タイムスタンプ, 温度, 湿度）
                 writer.writerow([timestamp, temperature, humidity])
         except Exception as e:
             print(f"CSVファイル書き込みエラー: {e}")
@@ -251,14 +269,19 @@ class TemperatureHumidityMonitor:
             self._cleanup()
     
     def _cleanup(self) -> None:
-        """リソースのクリーンアップ処理"""
+        """
+        リソースのクリーンアップ処理
+
+        プログラム終了時に必ず実行される処理
+        LCDディスプレイをクリアして、終了メッセージを表示
+        """
         print("\nクリーンアップ中...")
         if self.lcd:
             try:
                 self.lcd.clear()
-                self.lcd.write_string("終了")
-                time.sleep(1)
-                self.lcd.clear()
+                self.lcd.write_string("終了")  # 終了メッセージを表示
+                time.sleep(1)  # ユーザーが確認できるよう待機
+                self.lcd.clear()  # 画面をクリアして終了
             except Exception as e:
                 print(f"LCD終了処理エラー: {e}")
         print("モニタリングを終了しました")
