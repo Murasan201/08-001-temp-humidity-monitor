@@ -1,10 +1,12 @@
 # 温湿度モニタリングアプリの依存関係
+# 仮想環境内で pip install -r requirements.txt を実行してください
 
 # DHT11/DHT22センサー用ライブラリ
-Adafruit-DHT==1.4.0
+# 名前に「CircuitPython」とありますが、通常のPython（CPython）で使用可能です
+# Adafruit Blinkaが互換レイヤーを提供しています
+adafruit-blinka>=8.0.0
+adafruit-circuitpython-dht>=4.0.0
 
-# LCD1602 I2C制御用ライブラリ（前提リポジトリと同一）
-RPLCD==1.3.1
-
-# I2C通信用ライブラリ
-smbus==1.1.post2
+# Raspberry Pi 5 GPIO制御ライブラリ
+# Raspberry Pi 5では従来のRPi.GPIOではなくlgpioを使用します
+lgpio>=0.2.0
